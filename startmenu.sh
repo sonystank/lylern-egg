@@ -387,4 +387,5 @@ if [ -f ./hibernation.sh ]; then
 fi
 
 # Start server
+echo "SERVER_MEMORY is: $SERVER_MEMORY"
 exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
