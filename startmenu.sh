@@ -88,54 +88,167 @@ flush_stdin() {
 # Add set -e for critical install section
 set -e
 
-# Prompt for all values in a single input to avoid input buffer issues
-if [ ! -f .all_selected ]; then
+# Prompt for server type
+if [ ! -f .server_type_selected ]; then
   echo 'Welcome to Lylern Cloud!'
   echo '--- Server Startup Menu ---'
-  echo '1) Paper 2) Purpur 3) Vanilla 4) Spigot 5) Fabric 6) Forge 7) Bedrock 8) PocketMine 9) Nukkit 10) Velocity 11) BungeeCord'
-  echo 'World types: 1) DEFAULT 2) FLAT 3) AMPLIFIED'
-  echo 'Please enter the following values separated by commas:'
-  echo 'server_type_number (1-11), minecraft_version (or skip), motd (or skip), max_players (or skip), world_type_number (1-3), admin_username (or skip)'
-  read -r -p 'Example: 2,1.20.4,Welcome!,20,1,Steve: ' ALL_INPUT
-  IFS=',' read -r choice MINECRAFT_VERSION SERVER_MOTD MAX_PLAYERS WORLD_TYPE ADMIN_OP <<< "$ALL_INPUT"
-  # Set defaults and map numbers to values
-  case $choice in
-    1) SERVER_TYPE=paper ;;
-    2) SERVER_TYPE=purpur ;;
-    3) SERVER_TYPE=vanilla ;;
-    4) SERVER_TYPE=spigot ;;
-    5) SERVER_TYPE=fabric ;;
-    6) SERVER_TYPE=forge ;;
-    7) SERVER_TYPE=bedrock ;;
-    8) SERVER_TYPE=pocketmine ;;
-    9) SERVER_TYPE=nukkit ;;
-    10) SERVER_TYPE=velocity ;;
-    11) SERVER_TYPE=bungeecord ;;
-    *) SERVER_TYPE=paper ;;
-  esac
-  if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then MINECRAFT_VERSION=latest; fi
-  if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
-  if [ -z "$MAX_PLAYERS" ]; then MAX_PLAYERS=20; fi
-  case $WORLD_TYPE in
-    1|""|DEFAULT) WORLD_TYPE=DEFAULT ;;
-    2|FLAT) WORLD_TYPE=FLAT ;;
-    3|AMPLIFIED) WORLD_TYPE=AMPLIFIED ;;
-    *) WORLD_TYPE=DEFAULT ;;
-  esac
-  if [ -z "$ADMIN_OP" ] || [ "${ADMIN_OP,,}" = "skip" ]; then ADMIN_OP=""; fi
+  # Menu input validation
+  while true; do
+    echo '1) Paper'
+    echo '2) Purpur'
+    echo '3) Vanilla'
+    echo '4) Spigot'
+    echo '5) Fabric'
+    echo '6) Forge'
+    echo '7) Bedrock'
+    echo '8) PocketMine'
+    echo '9) Nukkit'
+    echo '10) Velocity'
+    echo '11) BungeeCord'
+    flush_stdin
+    read -r -p 'Enter your choice [1-11]: ' choice
+    flush_stdin
+    sleep 0.1
+    if echo "$choice" | grep -Eq '^[1-9]$|^10$|^11$'; then
+      case $choice in
+        1) SERVER_TYPE=paper ;;
+        2) SERVER_TYPE=purpur ;;
+        3) SERVER_TYPE=vanilla ;;
+        4) SERVER_TYPE=spigot ;;
+        5) SERVER_TYPE=fabric ;;
+        6) SERVER_TYPE=forge ;;
+        7) SERVER_TYPE=bedrock ;;
+        8) SERVER_TYPE=pocketmine ;;
+        9) SERVER_TYPE=nukkit ;;
+        10) SERVER_TYPE=velocity ;;
+        11) SERVER_TYPE=bungeecord ;;
+      esac
+      break
+    else
+      echo 'Invalid choice, please select a number between 1 and 11.'
+    fi
+    printf ''
+  done
   echo "$SERVER_TYPE" > .server_type_selected
-  echo "$MINECRAFT_VERSION" > .minecraft_version_selected
-  echo "$SERVER_MOTD" > .server_motd_selected
-  echo "$MAX_PLAYERS" > .max_players_selected
-  echo "$WORLD_TYPE" > .world_type_selected
-  echo "$ADMIN_OP" > .admin_op_selected
-  touch .all_selected
 else
   SERVER_TYPE=$(cat .server_type_selected)
+fi
+
+# Prompt for Minecraft version
+if [ ! -f .minecraft_version_selected ]; then
+  # Minecraft version prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter Minecraft version (type skip for latest): ' MINECRAFT_VERSION
+    flush_stdin
+    sleep 0.1
+    if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then
+      MINECRAFT_VERSION=latest
+      break
+    elif echo "$MINECRAFT_VERSION" | grep -Eq '^[0-9.]+$'; then
+      break
+    else
+      echo 'Invalid version, type skip for latest or enter a valid version.'
+    fi
+  done
+  echo "$MINECRAFT_VERSION" > .minecraft_version_selected
+else
   MINECRAFT_VERSION=$(cat .minecraft_version_selected)
+fi
+
+# Prompt for MOTD
+if [ ! -f .server_motd_selected ]; then
+  # MOTD prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter server MOTD (type skip for default): ' SERVER_MOTD
+    flush_stdin
+    sleep 0.1
+    if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then
+      SERVER_MOTD='Welcome to Lylern Cloud!'
+      break
+    elif [ "${#SERVER_MOTD}" -le 100 ]; then
+      break
+    else
+      echo 'MOTD too long, please enter a shorter message.'
+    fi
+  done
+  echo "$SERVER_MOTD" > .server_motd_selected
+else
   SERVER_MOTD=$(cat .server_motd_selected)
+fi
+
+# Numeric input validation for max players
+if [ ! -f .max_players_selected ]; then
+  # Max players prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
+    flush_stdin
+    sleep 0.1
+    if [ -z "$MAX_PLAYERS" ]; then
+      MAX_PLAYERS=20
+      break
+    elif echo "$MAX_PLAYERS" | grep -Eq '^[0-9]+$'; then
+      break
+    else
+      echo 'Invalid number, please enter a valid integer.'
+    fi
+  done
+  echo "$MAX_PLAYERS" > .max_players_selected
+else
   MAX_PLAYERS=$(cat .max_players_selected)
+fi
+
+# Prompt for world type
+if [ ! -f .world_type_selected ]; then
+  # World type prompt
+  while true; do
+    echo 'Select world type:'
+    echo '  1) DEFAULT'
+    echo '  2) FLAT'
+    echo '  3) AMPLIFIED'
+    flush_stdin
+    read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
+    flush_stdin
+    sleep 0.1
+    if [ -z "$WORLD_TYPE" ] || [ "$WORLD_TYPE" = "1" ]; then
+      WORLD_TYPE=DEFAULT
+      break
+    elif [ "$WORLD_TYPE" = "2" ]; then
+      WORLD_TYPE=FLAT
+      break
+    elif [ "$WORLD_TYPE" = "3" ]; then
+      WORLD_TYPE=AMPLIFIED
+      break
+    else
+      echo 'Invalid choice, please select 1, 2, or 3.'
+    fi
+  done
+  echo "$WORLD_TYPE" > .world_type_selected
+else
   WORLD_TYPE=$(cat .world_type_selected)
+fi
+
+# Prompt for admin/OP
+if [ ! -f .admin_op_selected ]; then
+  # Admin/OP prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter Minecraft username to OP (type skip to skip): ' ADMIN_OP
+    flush_stdin
+    sleep 0.1
+    if [ -z "$ADMIN_OP" ] || [ "${ADMIN_OP,,}" = "skip" ]; then
+      ADMIN_OP=""
+      break
+    elif echo "$ADMIN_OP" | grep -Eq '^[A-Za-z0-9_]{3,16}$'; then
+      break
+    else
+      echo 'Invalid username. Please enter a valid Minecraft username or type skip.'
+    fi
+  done
+  echo "$ADMIN_OP" > .admin_op_selected
+else
   ADMIN_OP=$(cat .admin_op_selected)
 fi
 
@@ -280,5 +393,4 @@ if [ -f ./hibernation.sh ]; then
 fi
 
 # Start server
-echo "SERVER_MEMORY is: $SERVER_MEMORY"
 exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
