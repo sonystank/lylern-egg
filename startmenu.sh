@@ -1,5 +1,10 @@
 #!/bin/ash
-cd /mnt/server
+# Ensure we are in the correct directory
+if [ -d /mnt/server ]; then
+  cd /mnt/server
+else
+  echo "/mnt/server does not exist, using current directory: $(pwd)"
+fi
 
 # Function to (re)create hibernation.sh
 create_hibernation() {
@@ -79,6 +84,11 @@ get_hibernation_hash() {
   done
 ) &
 
+# Add this function at the top
+flush_stdin() {
+  while read -r -t 0; do read -r; done
+}
+
 # Prompt for server type
 if [ ! -f .server_type_selected ]; then
   echo 'Welcome to Lylern Cloud!'
@@ -95,7 +105,7 @@ if [ ! -f .server_type_selected ]; then
     echo '9) Nukkit'
     echo '10) Velocity'
     echo '11) BungeeCord'
-    printf ''
+    flush_stdin
     read -r -p 'Enter your choice [1-11]: ' choice
     case $choice in
       1) SERVER_TYPE=paper ; break ;;
@@ -120,7 +130,7 @@ fi
 
 # Prompt for Minecraft version
 if [ ! -f .minecraft_version_selected ]; then
-  printf ''
+  flush_stdin
   read -r -p 'Enter Minecraft version (leave blank for latest): ' MINECRAFT_VERSION
   if [ -z "$MINECRAFT_VERSION" ]; then MINECRAFT_VERSION=latest; fi
   echo $MINECRAFT_VERSION > .minecraft_version_selected
@@ -130,7 +140,7 @@ fi
 
 # Prompt for MOTD
 if [ ! -f .server_motd_selected ]; then
-  printf ''
+  flush_stdin
   read -r -p 'Enter server MOTD (default: Welcome to Lylern Cloud!): ' SERVER_MOTD
   if [ -z "$SERVER_MOTD" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
   echo "$SERVER_MOTD" > .server_motd_selected
@@ -140,7 +150,7 @@ fi
 
 # Prompt for max players
 if [ ! -f .max_players_selected ]; then
-  printf ''
+  flush_stdin
   read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
   if [ -z "$MAX_PLAYERS" ]; then MAX_PLAYERS=20; fi
   echo $MAX_PLAYERS > .max_players_selected
@@ -154,7 +164,7 @@ if [ ! -f .world_type_selected ]; then
   echo '  1) DEFAULT'
   echo '  2) FLAT'
   echo '  3) AMPLIFIED'
-  printf ''
+  flush_stdin
   read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
   case $WORLD_TYPE in
     2) WORLD_TYPE=FLAT ;;
@@ -168,7 +178,7 @@ fi
 
 # Prompt for admin/OP
 if [ ! -f .admin_op_selected ]; then
-  printf ''
+  flush_stdin
   read -r -p 'Enter Minecraft username to OP (leave blank to skip): ' ADMIN_OP
   echo $ADMIN_OP > .admin_op_selected
 else
@@ -273,4 +283,15 @@ fi
 
 # Add OP if username provided
 if [ -n "$ADMIN_OP" ] && [ -f ops.json ]; then
-  echo "[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlay
+  echo "[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlayerLimit':false}]" > ops.json
+fi
+
+# Start hibernation if present
+if [ -f ./hibernation.sh ]; then
+  ./hibernation.sh &
+fi
+
+# Start server
+ls -lh
+file server.jar
+exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
