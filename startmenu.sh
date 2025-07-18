@@ -166,6 +166,95 @@ else
   ADMIN_OP=$(cat .admin_op_selected)
 fi
 
+# After SERVER_TYPE is set from the menu
+if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$MINECRAFT_VERSION" ]; then
+  echo "Installing $SERVER_TYPE server..."
+  case $SERVER_TYPE in
+    paper)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=$(curl -s https://api.papermc.io/v2/projects/paper | jq -r '.versions[-1]')
+      fi
+      BUILD=${BUILD_NUMBER:-latest}
+      if [ "$BUILD" = "latest" ]; then
+        BUILD=$(curl -s https://api.papermc.io/v2/projects/paper/versions/$VERSION | jq -r '.builds[-1]')
+      fi
+      curl -o server.jar https://api.papermc.io/v2/projects/paper/versions/$VERSION/builds/$BUILD/downloads/paper-$VERSION-$BUILD.jar
+      ;;
+    purpur)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=$(curl -s https://api.purpurmc.org/v2/purpur | jq -r '.versions[-1]')
+      fi
+      BUILD=${BUILD_NUMBER:-latest}
+      if [ "$BUILD" = "latest" ]; then
+        BUILD=$(curl -s https://api.purpurmc.org/v2/purpur/$VERSION | jq -r '.builds.latest')
+      fi
+      curl -o server.jar https://api.purpurmc.org/v2/purpur/$VERSION/$BUILD/download
+      ;;
+    vanilla)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r .latest.release)
+      fi
+      JAR_URL=$(curl -s https://launchermeta.mojang.com/mc/game/version_manifest.json | jq -r --arg v "$VERSION" '.versions[] | select(.id==$v) | .url')
+      if [ -z "$JAR_URL" ]; then echo "Invalid version"; exit 2; fi
+      DL_URL=$(curl -s $JAR_URL | jq -r '.downloads.server.url')
+      curl -o server.jar $DL_URL
+      ;;
+    spigot)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=1.20.4 # fallback
+      fi
+      echo 'Spigot requires BuildTools. Please build manually.' > server.jar
+      ;;
+    fabric)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=$(curl -s https://meta.fabricmc.net/v2/versions/game | jq -r '.[0].version')
+      fi
+      LOADER=$(curl -s https://meta.fabricmc.net/v2/versions/loader/$VERSION | jq -r '.[0].loader.version')
+      INSTALLER=$(curl -s https://meta.fabricmc.net/v2/versions/installer | jq -r '.[0].version')
+      curl -o fabric-installer.jar https://maven.fabricmc.net/net/fabricmc/fabric-installer/$INSTALLER/fabric-installer-$INSTALLER.jar
+      java -jar fabric-installer.jar server -mcversion $VERSION -loader $LOADER -downloadMinecraft
+      mv server.jar server-*.jar 2>/dev/null || true
+      ;;
+    forge)
+      VERSION=${MINECRAFT_VERSION:-latest}
+      if [ "$VERSION" = "latest" ]; then
+        VERSION=$(curl -s https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json | jq -r '.promos["1.20.4-latest"]')
+      fi
+      echo 'Forge requires installer. Please build manually.' > server.jar
+      ;;
+    bedrock)
+      DL_URL=$(curl -s https://www.minecraft.net/en-us/download/server/bedrock | grep -oP 'https://minecraft.azureedge.net/bin-linux/bedrock-server-.*?\\.zip')
+      curl -o bedrock.zip $DL_URL
+      unzip bedrock.zip
+      mv bedrock_server server.jar 2>/dev/null || true
+      ;;
+    pocketmine)
+      curl -L -o PocketMine-MP.phar https://jenkins.pmmp.io/job/PocketMine-MP/lastSuccessfulBuild/artifact/PocketMine-MP.phar
+      echo '#!/bin/sh\nexec php PocketMine-MP.phar --no-wizard --enable-ansi --disable-ansi' > start.sh
+      chmod +x start.sh
+      ln -sf start.sh server.jar
+      ;;
+    nukkit)
+      curl -L -o server.jar https://ci.opencollab.dev/job/NukkitX/job/Nukkit/job/master/lastSuccessfulBuild/artifact/target/nukkit-1.0-SNAPSHOT.jar
+      ;;
+    bungeecord)
+      curl -L -o server.jar https://ci.md-5.net/job/BungeeCord/lastSuccessfulBuild/artifact/bootstrap/target/BungeeCord.jar
+      ;;
+    velocity)
+      VERSION=$(curl -s https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
+      curl -o server.jar https://api.papermc.io/v2/projects/velocity/versions/$VERSION/builds/latest/downloads/velocity-$VERSION-latest.jar
+      ;;
+    *)
+      echo "Unknown server type"; exit 1 ;;
+  esac
+  echo "$SERVER_TYPE-$MINECRAFT_VERSION" > .server_installed
+fi
+
 # Update server.properties if present
 if [ -f server.properties ]; then
   sed -i "s/^motd=.*/motd=$SERVER_MOTD/" server.properties
