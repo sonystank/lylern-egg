@@ -131,8 +131,8 @@ fi
 # Prompt for Minecraft version
 if [ ! -f .minecraft_version_selected ]; then
   flush_stdin
-  read -r -p 'Enter Minecraft version (leave blank for latest): ' MINECRAFT_VERSION
-  if [ -z "$MINECRAFT_VERSION" ]; then MINECRAFT_VERSION=latest; fi
+  read -r -p 'Enter Minecraft version (type skip for latest): ' MINECRAFT_VERSION
+  if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then MINECRAFT_VERSION=latest; fi
   echo $MINECRAFT_VERSION > .minecraft_version_selected
 else
   MINECRAFT_VERSION=$(cat .minecraft_version_selected)
@@ -141,8 +141,8 @@ fi
 # Prompt for MOTD
 if [ ! -f .server_motd_selected ]; then
   flush_stdin
-  read -r -p 'Enter server MOTD (default: Welcome to Lylern Cloud!): ' SERVER_MOTD
-  if [ -z "$SERVER_MOTD" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
+  read -r -p 'Enter server MOTD (type skip for default): ' SERVER_MOTD
+  if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
   echo "$SERVER_MOTD" > .server_motd_selected
 else
   SERVER_MOTD=$(cat .server_motd_selected)
@@ -179,7 +179,8 @@ fi
 # Prompt for admin/OP
 if [ ! -f .admin_op_selected ]; then
   flush_stdin
-  read -r -p 'Enter Minecraft username to OP (leave blank to skip): ' ADMIN_OP
+  read -r -p 'Enter Minecraft username to OP (type skip to skip): ' ADMIN_OP
+  if [ "${ADMIN_OP,,}" = "skip" ]; then ADMIN_OP=""; fi
   echo $ADMIN_OP > .admin_op_selected
 else
   ADMIN_OP=$(cat .admin_op_selected)
