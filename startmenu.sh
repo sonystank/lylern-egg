@@ -83,32 +83,36 @@ get_hibernation_hash() {
 if [ ! -f .server_type_selected ]; then
   echo 'Welcome to Lylern Cloud!'
   echo '--- Server Startup Menu ---'
-  echo '1) Paper'
-  echo '2) Purpur'
-  echo '3) Vanilla'
-  echo '4) Spigot'
-  echo '5) Fabric'
-  echo '6) Forge'
-  echo '7) Bedrock'
-  echo '8) PocketMine'
-  echo '9) Nukkit'
-  echo '10) Velocity'
-  echo '11) BungeeCord'
-  read -p 'Enter your choice [1-11]: ' choice
-  case $choice in
-    1) SERVER_TYPE=paper ;;
-    2) SERVER_TYPE=purpur ;;
-    3) SERVER_TYPE=vanilla ;;
-    4) SERVER_TYPE=spigot ;;
-    5) SERVER_TYPE=fabric ;;
-    6) SERVER_TYPE=forge ;;
-    7) SERVER_TYPE=bedrock ;;
-    8) SERVER_TYPE=pocketmine ;;
-    9) SERVER_TYPE=nukkit ;;
-    10) SERVER_TYPE=velocity ;;
-    11) SERVER_TYPE=bungeecord ;;
-    *) echo 'Invalid choice, defaulting to Paper'; SERVER_TYPE=paper ;;
-  esac
+  while true; do
+    echo '1) Paper'
+    echo '2) Purpur'
+    echo '3) Vanilla'
+    echo '4) Spigot'
+    echo '5) Fabric'
+    echo '6) Forge'
+    echo '7) Bedrock'
+    echo '8) PocketMine'
+    echo '9) Nukkit'
+    echo '10) Velocity'
+    echo '11) BungeeCord'
+    printf ''
+    read -r -p 'Enter your choice [1-11]: ' choice
+    case $choice in
+      1) SERVER_TYPE=paper ; break ;;
+      2) SERVER_TYPE=purpur ; break ;;
+      3) SERVER_TYPE=vanilla ; break ;;
+      4) SERVER_TYPE=spigot ; break ;;
+      5) SERVER_TYPE=fabric ; break ;;
+      6) SERVER_TYPE=forge ; break ;;
+      7) SERVER_TYPE=bedrock ; break ;;
+      8) SERVER_TYPE=pocketmine ; break ;;
+      9) SERVER_TYPE=nukkit ; break ;;
+      10) SERVER_TYPE=velocity ; break ;;
+      11) SERVER_TYPE=bungeecord ; break ;;
+      *) echo 'Invalid choice, please select a number between 1 and 11.' ;;
+    esac
+    printf ''
+  done
   echo $SERVER_TYPE > .server_type_selected
 else
   SERVER_TYPE=$(cat .server_type_selected)
@@ -116,7 +120,8 @@ fi
 
 # Prompt for Minecraft version
 if [ ! -f .minecraft_version_selected ]; then
-  read -p 'Enter Minecraft version (leave blank for latest): ' MINECRAFT_VERSION
+  printf ''
+  read -r -p 'Enter Minecraft version (leave blank for latest): ' MINECRAFT_VERSION
   if [ -z "$MINECRAFT_VERSION" ]; then MINECRAFT_VERSION=latest; fi
   echo $MINECRAFT_VERSION > .minecraft_version_selected
 else
@@ -125,7 +130,8 @@ fi
 
 # Prompt for MOTD
 if [ ! -f .server_motd_selected ]; then
-  read -p 'Enter server MOTD (default: Welcome to Lylern Cloud!): ' SERVER_MOTD
+  printf ''
+  read -r -p 'Enter server MOTD (default: Welcome to Lylern Cloud!): ' SERVER_MOTD
   if [ -z "$SERVER_MOTD" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
   echo "$SERVER_MOTD" > .server_motd_selected
 else
@@ -134,7 +140,8 @@ fi
 
 # Prompt for max players
 if [ ! -f .max_players_selected ]; then
-  read -p 'Enter max players (default: 20): ' MAX_PLAYERS
+  printf ''
+  read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
   if [ -z "$MAX_PLAYERS" ]; then MAX_PLAYERS=20; fi
   echo $MAX_PLAYERS > .max_players_selected
 else
@@ -147,7 +154,8 @@ if [ ! -f .world_type_selected ]; then
   echo '  1) DEFAULT'
   echo '  2) FLAT'
   echo '  3) AMPLIFIED'
-  read -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
+  printf ''
+  read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
   case $WORLD_TYPE in
     2) WORLD_TYPE=FLAT ;;
     3) WORLD_TYPE=AMPLIFIED ;;
@@ -160,7 +168,8 @@ fi
 
 # Prompt for admin/OP
 if [ ! -f .admin_op_selected ]; then
-  read -p 'Enter Minecraft username to OP (leave blank to skip): ' ADMIN_OP
+  printf ''
+  read -r -p 'Enter Minecraft username to OP (leave blank to skip): ' ADMIN_OP
   echo $ADMIN_OP > .admin_op_selected
 else
   ADMIN_OP=$(cat .admin_op_selected)
@@ -264,13 +273,4 @@ fi
 
 # Add OP if username provided
 if [ -n "$ADMIN_OP" ] && [ -f ops.json ]; then
-  echo "[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlayerLimit':false}]" > ops.json
-fi
-
-# Start hibernation if present
-if [ -f ./hibernation.sh ]; then
-  ./hibernation.sh &
-fi
-
-# Start server
-exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
+  echo "[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlay
