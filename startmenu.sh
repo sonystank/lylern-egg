@@ -1,9 +1,6 @@
-  #!/bin/ash
-  # Ensure /mnt/server exists and is the working directory
-  if [ ! -d /mnt/server ]; then
-    mkdir -p /mnt/server
-  fi
-  cd /mnt/server
+#!/bin/ash
+# Use current directory for all operations
+echo "Using working directory: $(pwd)"
 
   # Function to (re)create hibernation.sh
   create_hibernation() {
