@@ -85,10 +85,14 @@ flush_stdin() {
   while read -r -t 0; do read -r; done
 }
 
+# Add set -e for critical install section
+set -e
+
 # Prompt for server type
 if [ ! -f .server_type_selected ]; then
   echo 'Welcome to Lylern Cloud!'
   echo '--- Server Startup Menu ---'
+  # Menu input validation
   while true; do
     echo '1) Paper'
     echo '2) Purpur'
@@ -103,81 +107,147 @@ if [ ! -f .server_type_selected ]; then
     echo '11) BungeeCord'
     flush_stdin
     read -r -p 'Enter your choice [1-11]: ' choice
-    case $choice in
-      1) SERVER_TYPE=paper ; break ;;
-      2) SERVER_TYPE=purpur ; break ;;
-      3) SERVER_TYPE=vanilla ; break ;;
-      4) SERVER_TYPE=spigot ; break ;;
-      5) SERVER_TYPE=fabric ; break ;;
-      6) SERVER_TYPE=forge ; break ;;
-      7) SERVER_TYPE=bedrock ; break ;;
-      8) SERVER_TYPE=pocketmine ; break ;;
-      9) SERVER_TYPE=nukkit ; break ;;
-      10) SERVER_TYPE=velocity ; break ;;
-      11) SERVER_TYPE=bungeecord ; break ;;
-      *) echo 'Invalid choice, please select a number between 1 and 11.' ;;
-    esac
+    flush_stdin
+    sleep 0.1
+    if echo "$choice" | grep -Eq '^[1-9]$|^10$|^11$'; then
+      case $choice in
+        1) SERVER_TYPE=paper ;;
+        2) SERVER_TYPE=purpur ;;
+        3) SERVER_TYPE=vanilla ;;
+        4) SERVER_TYPE=spigot ;;
+        5) SERVER_TYPE=fabric ;;
+        6) SERVER_TYPE=forge ;;
+        7) SERVER_TYPE=bedrock ;;
+        8) SERVER_TYPE=pocketmine ;;
+        9) SERVER_TYPE=nukkit ;;
+        10) SERVER_TYPE=velocity ;;
+        11) SERVER_TYPE=bungeecord ;;
+      esac
+      break
+    else
+      echo 'Invalid choice, please select a number between 1 and 11.'
+    fi
     printf ''
   done
-  echo $SERVER_TYPE > .server_type_selected
+  echo "$SERVER_TYPE" > .server_type_selected
 else
   SERVER_TYPE=$(cat .server_type_selected)
 fi
 
 # Prompt for Minecraft version
 if [ ! -f .minecraft_version_selected ]; then
-  flush_stdin
-  read -r -p 'Enter Minecraft version (type skip for latest): ' MINECRAFT_VERSION
-  if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then MINECRAFT_VERSION=latest; fi
-  echo $MINECRAFT_VERSION > .minecraft_version_selected
+  # Minecraft version prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter Minecraft version (type skip for latest): ' MINECRAFT_VERSION
+    flush_stdin
+    sleep 0.1
+    if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then
+      MINECRAFT_VERSION=latest
+      break
+    elif echo "$MINECRAFT_VERSION" | grep -Eq '^[0-9.]+$'; then
+      break
+    else
+      echo 'Invalid version, type skip for latest or enter a valid version.'
+    fi
+  done
+  echo "$MINECRAFT_VERSION" > .minecraft_version_selected
 else
   MINECRAFT_VERSION=$(cat .minecraft_version_selected)
 fi
 
 # Prompt for MOTD
 if [ ! -f .server_motd_selected ]; then
-  flush_stdin
-  read -r -p 'Enter server MOTD (type skip for default): ' SERVER_MOTD
-  if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then SERVER_MOTD='Welcome to Lylern Cloud!'; fi
+  # MOTD prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter server MOTD (type skip for default): ' SERVER_MOTD
+    flush_stdin
+    sleep 0.1
+    if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then
+      SERVER_MOTD='Welcome to Lylern Cloud!'
+      break
+    elif [ "${#SERVER_MOTD}" -le 100 ]; then
+      break
+    else
+      echo 'MOTD too long, please enter a shorter message.'
+    fi
+  done
   echo "$SERVER_MOTD" > .server_motd_selected
 else
   SERVER_MOTD=$(cat .server_motd_selected)
 fi
 
-# Prompt for max players
+# Numeric input validation for max players
 if [ ! -f .max_players_selected ]; then
-  flush_stdin
-  read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
-  if [ -z "$MAX_PLAYERS" ]; then MAX_PLAYERS=20; fi
-  echo $MAX_PLAYERS > .max_players_selected
+  # Max players prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
+    flush_stdin
+    sleep 0.1
+    if [ -z "$MAX_PLAYERS" ]; then
+      MAX_PLAYERS=20
+      break
+    elif echo "$MAX_PLAYERS" | grep -Eq '^[0-9]+$'; then
+      break
+    else
+      echo 'Invalid number, please enter a valid integer.'
+    fi
+  done
+  echo "$MAX_PLAYERS" > .max_players_selected
 else
   MAX_PLAYERS=$(cat .max_players_selected)
 fi
 
 # Prompt for world type
 if [ ! -f .world_type_selected ]; then
-  echo 'Select world type:'
-  echo '  1) DEFAULT'
-  echo '  2) FLAT'
-  echo '  3) AMPLIFIED'
-  flush_stdin
-  read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
-  case $WORLD_TYPE in
-    2) WORLD_TYPE=FLAT ;;
-    3) WORLD_TYPE=AMPLIFIED ;;
-    *) WORLD_TYPE=DEFAULT ;;
-  esac
-  echo $WORLD_TYPE > .world_type_selected
+  # World type prompt
+  while true; do
+    echo 'Select world type:'
+    echo '  1) DEFAULT'
+    echo '  2) FLAT'
+    echo '  3) AMPLIFIED'
+    flush_stdin
+    read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
+    flush_stdin
+    sleep 0.1
+    if [ -z "$WORLD_TYPE" ] || [ "$WORLD_TYPE" = "1" ]; then
+      WORLD_TYPE=DEFAULT
+      break
+    elif [ "$WORLD_TYPE" = "2" ]; then
+      WORLD_TYPE=FLAT
+      break
+    elif [ "$WORLD_TYPE" = "3" ]; then
+      WORLD_TYPE=AMPLIFIED
+      break
+    else
+      echo 'Invalid choice, please select 1, 2, or 3.'
+    fi
+  done
+  echo "$WORLD_TYPE" > .world_type_selected
 else
   WORLD_TYPE=$(cat .world_type_selected)
 fi
 
 # Prompt for admin/OP
 if [ ! -f .admin_op_selected ]; then
-  flush_stdin
-  read -r -p 'Enter Minecraft username to OP (type skip to skip): ' ADMIN_OP
-  if [ "${ADMIN_OP,,}" = "skip" ]; then ADMIN_OP=""; fi
-  echo $ADMIN_OP > .admin_op_selected
+  # Admin/OP prompt
+  while true; do
+    flush_stdin
+    read -r -p 'Enter Minecraft username to OP (type skip to skip): ' ADMIN_OP
+    flush_stdin
+    sleep 0.1
+    if [ -z "$ADMIN_OP" ] || [ "${ADMIN_OP,,}" = "skip" ]; then
+      ADMIN_OP=""
+      break
+    elif echo "$ADMIN_OP" | grep -Eq '^[A-Za-z0-9_]{3,16}$'; then
+      break
+    else
+      echo 'Invalid username. Please enter a valid Minecraft username or type skip.'
+    fi
+  done
+  echo "$ADMIN_OP" > .admin_op_selected
 else
   ADMIN_OP=$(cat .admin_op_selected)
 fi
@@ -196,6 +266,15 @@ if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$
         BUILD=$(curl -s https://api.papermc.io/v2/projects/paper/versions/$VERSION | jq -r '.builds[-1]')
       fi
       curl -o server.jar https://api.papermc.io/v2/projects/paper/versions/$VERSION/builds/$BUILD/downloads/paper-$VERSION-$BUILD.jar
+      # After downloading server.jar in each case, add debug output and abort if corrupt
+      ls -lh server.jar
+      file server.jar
+      head -20 server.jar
+      if [ $(stat -c%s server.jar) -lt 100000 ]; then
+        echo "ERROR: server.jar is too small or corrupt. Aborting startup."
+        cat server.jar
+        exit 1
+      fi
       ;;
     purpur)
       VERSION=${MINECRAFT_VERSION:-latest}
@@ -207,6 +286,15 @@ if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$
         BUILD=$(curl -s https://api.purpurmc.org/v2/purpur/$VERSION | jq -r '.builds.latest')
       fi
       curl -o server.jar https://api.purpurmc.org/v2/purpur/$VERSION/$BUILD/download
+      # After downloading server.jar in each case, add debug output and abort if corrupt
+      ls -lh server.jar
+      file server.jar
+      head -20 server.jar
+      if [ $(stat -c%s server.jar) -lt 100000 ]; then
+        echo "ERROR: server.jar is too small or corrupt. Aborting startup."
+        cat server.jar
+        exit 1
+      fi
       ;;
     vanilla)
       VERSION=${MINECRAFT_VERSION:-latest}
@@ -217,6 +305,15 @@ if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$
       if [ -z "$JAR_URL" ]; then echo "Invalid version"; exit 2; fi
       DL_URL=$(curl -s $JAR_URL | jq -r '.downloads.server.url')
       curl -o server.jar $DL_URL
+      # After downloading server.jar in each case, add debug output and abort if corrupt
+      ls -lh server.jar
+      file server.jar
+      head -20 server.jar
+      if [ $(stat -c%s server.jar) -lt 100000 ]; then
+        echo "ERROR: server.jar is too small or corrupt. Aborting startup."
+        cat server.jar
+        exit 1
+      fi
       ;;
     spigot)
       VERSION=${MINECRAFT_VERSION:-latest}
@@ -266,21 +363,28 @@ if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$
       curl -o server.jar https://api.papermc.io/v2/projects/velocity/versions/$VERSION/builds/latest/downloads/velocity-$VERSION-latest.jar
       ;;
     *)
-      echo \"Unknown server type\"; exit 1 ;;
+      echo "Unknown server type"; exit 1 ;;
   esac
-  echo \"$SERVER_TYPE-$MINECRAFT_VERSION\" > .server_installed
+  echo "$SERVER_TYPE-$MINECRAFT_VERSION" > .server_installed
 fi
 
-# Update server.properties if present
-if [ -f server.properties ]; then
-  sed -i \"s/^motd=.*/motd=$SERVER_MOTD/\" server.properties
-  sed -i \"s/^max-players=.*/max-players=$MAX_PLAYERS/\" server.properties
-  sed -i \"s/^level-type=.*/level-type=$WORLD_TYPE/\" server.properties
+# Download default server.properties if missing
+if [ ! -f server.properties ]; then
+  echo "server.properties missing, downloading default."
+  curl -fsSL -o server.properties https://raw.githubusercontent.com/parkervcp/eggs/master/minecraft/java/server.properties || { echo "Failed to download server.properties"; exit 1; }
+fi
+# Only run sed if server.properties exists and is not empty
+if [ -s server.properties ]; then
+  sed -i "s/^motd=.*/motd=$SERVER_MOTD/" server.properties || { echo "Failed to update motd in server.properties"; cat server.properties; }
+  sed -i "s/^max-players=.*/max-players=$MAX_PLAYERS/" server.properties || { echo "Failed to update max-players in server.properties"; cat server.properties; }
+  sed -i "s/^level-type=.*/level-type=$WORLD_TYPE/" server.properties || { echo "Failed to update level-type in server.properties"; cat server.properties; }
+else
+  echo "server.properties missing or empty, skipping sed."
 fi
 
 # Add OP if username provided
-if [ -n \"$ADMIN_OP\" ] && [ -f ops.json ]; then
-  echo \"[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlayerLimit':false}]\" > ops.json
+if [ -n "$ADMIN_OP" ] && [ -f ops.json ]; then
+  echo "[{'uuid':'','name':'$ADMIN_OP','level':4,'bypassesPlayerLimit':false}]" > ops.json
 fi
 
 # Start hibernation if present
