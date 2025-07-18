@@ -88,11 +88,13 @@ flush_stdin() {
 # Add set -e for critical install section
 set -e
 
+# Temporarily disable set -e for prompt section to avoid script exit on failed read
+set +e
+
 # Prompt for server type
 if [ ! -f .server_type_selected ]; then
   echo 'Welcome to Lylern Cloud!'
   echo '--- Server Startup Menu ---'
-  # Menu input validation
   while true; do
     echo '1) Paper'
     echo '2) Purpur'
@@ -105,9 +107,9 @@ if [ ! -f .server_type_selected ]; then
     echo '9) Nukkit'
     echo '10) Velocity'
     echo '11) BungeeCord'
-    flush_stdin
     read -r -p 'Enter your choice [1-11]: ' choice
-    flush_stdin
+    # Clear any extra input from buffer
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if echo "$choice" | grep -Eq '^[1-9]$|^10$|^11$'; then
       case $choice in
@@ -136,11 +138,9 @@ fi
 
 # Prompt for Minecraft version
 if [ ! -f .minecraft_version_selected ]; then
-  # Minecraft version prompt
   while true; do
-    flush_stdin
     read -r -p 'Enter Minecraft version (type skip for latest): ' MINECRAFT_VERSION
-    flush_stdin
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if [ -z "$MINECRAFT_VERSION" ] || [ "${MINECRAFT_VERSION,,}" = "skip" ]; then
       MINECRAFT_VERSION=latest
@@ -158,11 +158,9 @@ fi
 
 # Prompt for MOTD
 if [ ! -f .server_motd_selected ]; then
-  # MOTD prompt
   while true; do
-    flush_stdin
     read -r -p 'Enter server MOTD (type skip for default): ' SERVER_MOTD
-    flush_stdin
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if [ -z "$SERVER_MOTD" ] || [ "${SERVER_MOTD,,}" = "skip" ]; then
       SERVER_MOTD='Welcome to Lylern Cloud!'
@@ -180,11 +178,9 @@ fi
 
 # Numeric input validation for max players
 if [ ! -f .max_players_selected ]; then
-  # Max players prompt
   while true; do
-    flush_stdin
     read -r -p 'Enter max players (default: 20): ' MAX_PLAYERS
-    flush_stdin
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if [ -z "$MAX_PLAYERS" ]; then
       MAX_PLAYERS=20
@@ -202,15 +198,13 @@ fi
 
 # Prompt for world type
 if [ ! -f .world_type_selected ]; then
-  # World type prompt
   while true; do
     echo 'Select world type:'
     echo '  1) DEFAULT'
     echo '  2) FLAT'
     echo '  3) AMPLIFIED'
-    flush_stdin
     read -r -p 'Enter your choice [1-3, default: 1]: ' WORLD_TYPE
-    flush_stdin
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if [ -z "$WORLD_TYPE" ] || [ "$WORLD_TYPE" = "1" ]; then
       WORLD_TYPE=DEFAULT
@@ -232,11 +226,9 @@ fi
 
 # Prompt for admin/OP
 if [ ! -f .admin_op_selected ]; then
-  # Admin/OP prompt
   while true; do
-    flush_stdin
     read -r -p 'Enter Minecraft username to OP (type skip to skip): ' ADMIN_OP
-    flush_stdin
+    while read -r -t 0.1; do :; done
     sleep 0.1
     if [ -z "$ADMIN_OP" ] || [ "${ADMIN_OP,,}" = "skip" ]; then
       ADMIN_OP=""
@@ -251,6 +243,9 @@ if [ ! -f .admin_op_selected ]; then
 else
   ADMIN_OP=$(cat .admin_op_selected)
 fi
+
+# Re-enable set -e after prompts
+set -e
 
 # After SERVER_TYPE is set from the menu
 if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$MINECRAFT_VERSION" ]; then
@@ -393,4 +388,5 @@ if [ -f ./hibernation.sh ]; then
 fi
 
 # Start server
+echo "SERVER_MEMORY is: $SERVER_MEMORY"
 exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
