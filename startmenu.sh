@@ -5,7 +5,12 @@ cd /mnt/server
 create_hibernation() {
 cat > ./hibernation.sh <<'EOF'
 #!/bin/ash
-IDLE_LIMIT=$((2 * 60 * 60)) # 2 hours
+# Set hibernation time: 12 hours for Velocity/BungeeCord, 2 hours for others
+if [ "$SERVER_TYPE" = "velocity" ] || [ "$SERVER_TYPE" = "bungeecord" ]; then
+  IDLE_LIMIT=$((12 * 60 * 60)) # 12 hours
+else
+  IDLE_LIMIT=$((2 * 60 * 60))  # 2 hours
+fi
 CHECK_INTERVAL=60
 IDLE_TIME=0
 LOG_FILE=latest.log
@@ -22,7 +27,7 @@ while true; do
         IDLE_TIME=0
     fi
     if [ $IDLE_TIME -ge $IDLE_LIMIT ]; then
-        echo "No players for 2 hours, stopping server for hibernation."
+        echo "No players for $((IDLE_LIMIT/3600)) hours, stopping server for hibernation."
         # Java servers
         if pgrep -f 'server.jar'; then
             pkill -f 'server.jar'
@@ -87,7 +92,9 @@ if [ ! -f .server_type_selected ]; then
   echo '7) Bedrock'
   echo '8) PocketMine'
   echo '9) Nukkit'
-  read -p 'Enter your choice [1-9]: ' choice
+  echo '10) Velocity'
+  echo '11) BungeeCord'
+  read -p 'Enter your choice [1-11]: ' choice
   case $choice in
     1) SERVER_TYPE=paper ;;
     2) SERVER_TYPE=purpur ;;
@@ -98,6 +105,8 @@ if [ ! -f .server_type_selected ]; then
     7) SERVER_TYPE=bedrock ;;
     8) SERVER_TYPE=pocketmine ;;
     9) SERVER_TYPE=nukkit ;;
+    10) SERVER_TYPE=velocity ;;
+    11) SERVER_TYPE=bungeecord ;;
     *) echo 'Invalid choice, defaulting to Paper'; SERVER_TYPE=paper ;;
   esac
   echo $SERVER_TYPE > .server_type_selected
@@ -175,4 +184,4 @@ if [ -f ./hibernation.sh ]; then
 fi
 
 # Start server
-exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui 
+exec java -Xms128M -Xmx${SERVER_MEMORY}M -jar server.jar nogui
