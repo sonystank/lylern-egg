@@ -85,6 +85,21 @@ flush_stdin() {
   while read -r -t 0; do read -r; done
 }
 
+# Function to clear input buffer
+clear_input_buffer() {
+  while read -r -t 0; do read -r; done
+}
+
+# Function to write server type with error checking
+write_server_type() {
+  local server_type=$1
+  if ! echo "$server_type" > ".server_type_selected"; then
+    echo "ERROR: Failed to save server type. Check write permissions." >&2
+    return 1
+  fi
+  return 0
+}
+
 # Add set -e for critical install section
 set -e
 
@@ -92,25 +107,33 @@ set -e
 set +e
 
 # Prompt for server type
-if [ ! -f .server_type_selected ]; then
-  echo 'Welcome to Lylern Cloud!'
-  echo '--- Server Startup Menu ---'
+if [ ! -f .server_type_selected ] || [ ! -s .server_type_selected ]; then
+  echo '╔══════════════════════════════════════════╗'
+  echo '║         Welcome to Lylern Cloud!         ║'
+  echo '╚══════════════════════════════════════════╝'
+  echo '\n--- Server Type Selection ---\n'
   while true; do
-    echo '1) Paper'
-    echo '2) Purpur'
-    echo '3) Vanilla'
-    echo '4) Spigot'
-    echo '5) Fabric'
-    echo '6) Forge'
-    echo '7) Bedrock'
-    echo '8) PocketMine'
-    echo '9) Nukkit'
-    echo '10) Velocity'
-    echo '11) BungeeCord'
-    read -r -p 'Enter your choice [1-11]: ' choice
-    # Clear any extra input from buffer
-    while read -r -t 0.1; do :; done
-    sleep 0.1
+    echo ' 1) Paper (Recommended)'
+    echo ' 2) Purpur (Optimized Paper fork)'
+    echo ' 3) Vanilla (Official Minecraft)'
+    echo ' 4) Spigot (Requires BuildTools)'
+    echo ' 5) Fabric (Mod loader)'
+    echo ' 6) Forge (Mod loader)'
+    echo ' 7) Bedrock Edition'
+    echo ' 8) PocketMine (Pocket Edition)'
+    echo ' 9) Nukkit (Pocket Edition)'
+    echo '10) Velocity (Proxy)'
+    echo '11) BungeeCord (Proxy)'
+    echo ''
+    read -r -p 'Enter your choice [1-11] (Ctrl+C to exit): ' choice
+    
+    # Clear input buffer to handle any extra characters
+    clear_input_buffer
+    
+    # Convert to lowercase for case-insensitive comparison
+    choice=$(echo "$choice" | tr '[:upper:]' '[:lower:]')
+    
+    # Check if input is valid
     if echo "$choice" | grep -Eq '^[1-9]$|^10$|^11$'; then
       case $choice in
         1) SERVER_TYPE=paper ;;
@@ -125,13 +148,26 @@ if [ ! -f .server_type_selected ]; then
         10) SERVER_TYPE=velocity ;;
         11) SERVER_TYPE=bungeecord ;;
       esac
-      break
+      
+      echo "\nSelected: $SERVER_TYPE"
+      
+      # Write server type with error checking
+      if write_server_type "$SERVER_TYPE"; then
+        break
+      else
+        echo "Please try again or check directory permissions."
+        continue
+      fi
     else
-      echo 'Invalid choice, please select a number between 1 and 11.'
+      echo '\n❌ Invalid choice. Please enter a number between 1 and 11.\n'
+      # Show the menu again after a brief pause
+      echo 'Press any key to continue...'
+      read -n 1 -s
+      clear
+      continue
     fi
-    printf ''
   done
-  echo "$SERVER_TYPE" > .server_type_selected
+  echo
 else
   SERVER_TYPE=$(cat .server_type_selected)
 fi
@@ -351,16 +387,34 @@ if [ ! -f .server_installed ] || [ "$(cat .server_installed)" != "$SERVER_TYPE-$
       curl -L -o server.jar https://ci.opencollab.dev/job/NukkitX/job/Nukkit/job/master/lastSuccessfulBuild/artifact/target/nukkit-1.0-SNAPSHOT.jar
       ;;
     bungeecord)
-      curl -L -o server.jar https://ci.md-5.net/job/BungeeCord/lastSuccessfulBuild/artifact/bootstrap/target/BungeeCord.jar
+      VERSION=$(curl -s https://ci.md-5.net/job/BungeeCord/lastSuccessfulBuild/buildNumber)
+      curl -o server.jar https://ci.md-5.net/job/BungeeCord/lastSuccessfulBuild/artifact/bootstrap/target/BungeeCord.jar
       ;;
     velocity)
       VERSION=$(curl -s https://api.papermc.io/v2/projects/velocity | jq -r '.versions[-1]')
       curl -o server.jar https://api.papermc.io/v2/projects/velocity/versions/$VERSION/builds/latest/downloads/velocity-$VERSION-latest.jar
       ;;
     *)
-      echo "Unknown server type"; exit 1 ;;
+      echo "Unsupported server type: $SERVER_TYPE"
+      exit 1
+      ;;
   esac
+  
+  # Verify server.jar was downloaded successfully
+  if [ ! -f "server.jar" ]; then
+    echo "ERROR: Failed to download server.jar for $SERVER_TYPE"
+    exit 1
+  fi
+  
+  # Check if the file is a valid JAR
+  if [ $(stat -c%s server.jar) -lt 100000 ]; then
+    echo "ERROR: server.jar is too small or corrupt. Aborting startup."
+    cat server.jar
+    exit 1
+  fi
+  
   echo "$SERVER_TYPE-$MINECRAFT_VERSION" > .server_installed
+  echo "Successfully installed $SERVER_TYPE server"
 fi
 
 # Download default server.properties if missing
